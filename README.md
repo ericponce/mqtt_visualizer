@@ -3,6 +3,8 @@ A webapp for visualizing iot data streams sent over MQTT.
 In the future it will also act as a time server for MQTT connected devices.
 Also provides python scripts for generating faked MQTT datastreams.
 
+![Screenshot](screenshot.png?raw=true)
+
 ## MQTT Data Format
 
 The visualizer expects data in a JSON format. Data is sent to the topic as an array of objects containing a timestamp ('ts') and data value ('x'). If the final element in the array has a timestamp of zero, the previous timestamps are assumed to be offsets from the time of sending, thus allowing for timeless packets to be sent. 
