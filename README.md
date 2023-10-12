@@ -8,7 +8,9 @@ Also provides python scripts for generating faked MQTT datastreams.
 ## Usage
 First, sepcfiy the configuration for the webapp by editing the JSON presented when pressing the edit button on the bottom right corner.
 Graphs are created using dygraph and allow for zooming by click-dragging across an x- or y-range.
-The view may be restored by double clicking the graph. 
+The view may be restored by double clicking the graph.
+
+Importantly, this webapp connects to a MQTT broker over a websocket, which requires explicit support by the broker.
 
 ## MQTT Data Format
 
@@ -81,6 +83,8 @@ python publish.py
 - create connection between two storage types (mqtt clients and graphs)
 - implement 'add' button
 - add ability to customize plot (labels, color, min/max)
+- Create graph div only when data is recevied
+- cleanup 'app' directory
 
 ### MQTT
 - When checking for an already exisitng connection to broker, convert hostname to ip address
@@ -88,3 +92,7 @@ python publish.py
 - support QOS other than 1
 - support labels for multiple data values in a single stream
 - add time server support (add a checkbox to configuration or include in json)
+
+### Test
+- Add support for testing time server
+- Add support for sending multiple datastreams from one instance of a script (currently this requires multiple instances of publish.py)
