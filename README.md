@@ -5,6 +5,11 @@ Also provides python scripts for generating faked MQTT datastreams.
 
 ![Screenshot](screenshot.png?raw=true)
 
+## Usage
+First, sepcfiy the configuration for the webapp by editing the JSON presented when pressing the edit button on the bottom right corner.
+Graphs are created using dygraph and allow for zooming by click-dragging across an x- or y-range.
+The view may be restored by double clicking the graph. 
+
 ## MQTT Data Format
 
 The visualizer expects data in a JSON format. Data is sent to the topic as an array of objects containing a timestamp ('ts') and data value ('x'). If the final element in the array has a timestamp of zero, the previous timestamps are assumed to be offsets from the time of sending, thus allowing for timeless packets to be sent. 
@@ -75,10 +80,11 @@ python publish.py
 - improve handling of disconnect state
 - create connection between two storage types (mqtt clients and graphs)
 - implement 'add' button
+- add ability to customize plot (labels, color, min/max)
 
 ### MQTT
 - When checking for an already exisitng connection to broker, convert hostname to ip address
 - support mqtt authentication
 - support QOS other than 1
 - support labels for multiple data values in a single stream
-- add time server support
+- add time server support (add a checkbox to configuration or include in json)
