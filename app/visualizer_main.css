@@ -1,0 +1,145 @@
+:root {
+    --white: #f3f4f8;
+    --lightestgray: #d2d4da;
+    --lightergray: #b2b5bd;
+    --lightgray: #9496a1;
+    --gray: #777986;
+    --darkgray: #5b5d6b;
+    --darkergray: #404252;
+    --darkestgray: #282a3a;
+    --black: #101223;
+
+    --green: #5cdb5c;
+
+    --square-button-width: 40px;
+    --square-button-padding: 3px;
+
+    --editor-width: 100%;
+    --editor-height: 250px;
+}
+
+* {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+body {
+	height: 100vh;
+	background: var(--black);
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+#plotGrid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.plotContainer {
+    width: calc((100% / 2) - 60px);
+    background: var(--darkestgray);
+    border-radius: 4px 4px;
+    padding: 1em;
+    margin: 1em;
+}
+
+@media only screen and (max-width: 1100px){
+    /* CSS that should be displayed if width is equal to or less than 991px */
+    #plotGrid {
+         flex-direction: column;
+     }
+
+    .plotContainer {
+        width: calc(100% - 2em);
+    }
+}
+
+#footer {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    
+}
+
+#addButton {
+    width: var(--square-button-width);
+    height: var(--square-button-width);
+    background: var(--white);
+    cursor: pointer;
+    border: 2px solid var(--green);
+    border-radius: 5px;
+
+    fill: var(--green);
+    padding: var(--square-button-padding);
+
+    margin: 5px;
+    margin-top: 0px;
+    margin-left: 0px;
+}
+
+
+#addButton:hover {
+    background-color: var(--green);
+    transition: 0.2s;
+
+    fill: var(--white);
+}
+
+#editButton {
+    width: var(--square-button-width);
+    height: var(--square-button-width);
+    background: var(--white);
+    border: 2px solid var(--green);
+    border-radius: 5px;
+
+    fill: var(--green);
+    padding: var(--square-button-padding);
+
+    font-size: 1em;
+
+    margin: 5px;
+    margin-top: 0px;
+    margin-left: 0px;
+}
+
+#editButton:hover {
+    background-color: var(--green);
+    transition: 0.2s;
+    fill: var(--white);
+}
+
+#edit-popup textarea {
+    width: var(--editor-width);
+    height: var(--editor-height);
+
+    font-family: sans-serif;
+    font-size: 1em;
+}
+
+.editor-dialog.ui-dialog {
+    border: 1px solid var(--green);
+    padding: 0;
+}
+
+.editor-dialog .ui-dialog-titlebar {
+    padding: 0.1em .5em;
+    position: relative;
+    font-size: 1em;
+}
+
+.editor-dialog .ui-widget-header {
+    background: var(--green);
+    border: 0;
+    border-radius: 0;
+    color: var(--white);
+    font-weight: normal;
+}
+
+.editor-dialog .ui-dialog-content {
+    background: none repeat scroll 0 0 transparent;
+    border: 0 none;
+    overflow: auto;
+    position: relative;
+    padding: 0;
+}

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>MQTT Visualizer</title>
+<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.2/themes/smoothness/jquery-ui.css">
+<link rel="stylesheet" href="dygraph.css">
+<link rel="stylesheet" href="visualizer_main.css">
+
+<style>
+	
+</style>
+
+<script type="text/javascript" src="utils.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+<script src="dygraph.min.js"></script>
+<script src="paho-mqtt.js" type="text/javascript"></script>
+<script type="text/javascript">
+
+
+	/*
+			adapted from @bordignon on twitter Feb 2014
+			adapted for Dycharts by Malcolm Yeoman
+			adapted for MQTT Visualizer by eaponce Jan 2023
+	*/
+
+	var reparseConfiguration = true;
+
+	var mqttClients = new Array();
+	var mqttConnected = new Array();
+	var mqttClientTopics = new Array();
+	var mqttClientHosts = new Array();
+
+	var topics = new Array();
+	var dataArrays = new Array();
+	var hosts = new Array();
+	var graphs = new Array();
+	var graphDIVs = new Array();
+	var initalized = new Array();
+
+	function onMessageArrived(message) {
+		var destinationName = message.destinationName
+
+		for (var i = 0; i < topics.length; i++) {
+			if (topics[i] === destinationName.toLowerCase()) {
+				console.log("recevied data from " + hosts[i] + " to " + topics[i]);
+				const payload = JSON.parse(message.payloadString);
+				// Check if packet is timeless,
+				// 		offset by system time is so
+				if (payload[payload.length - 1].ts == 0) {
+					let curTime = (new Date()).getTime();
+
+					for (let j = 0; j < payload.length; j++) {
+						payload[j].ts = curTime + payload[j].ts;
+					}
+				}
+
+				for (let j = 0; j < payload.length; j++) {
+					let t = new Date(Math.round(payload[j].ts));
+					let x = payload[j].x;
+					dataArrays[i].push([t, x]);
+				}
+
+				if (!initalized[i]) {
+					graphs[i] = new Dygraph(
+					document.getElementById(graphDIVs[i]),
+					dataArrays[i],
+					{
+						drawPoints: true,
+						// showRoller: false,
+						// drawAxis: true,
+						// title: title,
+						// labels: labels,
+						// colors: colors,
+						// xlabel: axisLabels[0],
+						// ylabel: axisLabels[1],
+						// valueRange: valueRange
+						// showRangeSelector: true,
+						//rangeSelectorPlotFillColor: 'MediumSlateBlue',
+						//rangeSelectorPlotFillGradientColor: 'rgba(123, 104, 238, 0)'
+					});
+					initalized[i] = true;
+				}
+
+				var rollIndex = 0
+				graphs[i].updateOptions({'file': dataArrays[i].slice(rollIndex)});
+			}
+		}
+			
+	};
+
+	function createNewTopicGraph(host, topic) {
+		hosts.push(host);
+		topics.push(topic);
+		dataArrays.push(new Array());
+
+		graphDivID = host + "_" + topic+"_g";
+		graphDivID = graphDivID.replace(/\/|\./gm, "");
+
+		$("#plotGrid").append("<div class=\"plotContainer\" style=\"display: flex;\">"
+			+ "<div id=\"" + graphDivID + "\" class=\"graph\" style=\"width: 100%;\"></div></div>");
+
+		graphs.push({});
+		graphDIVs.push(graphDivID);
+		initalized.push(false);
+	}
+
+
+	function parseConfiguation() {
+		try {
+			var obj = JSON.parse($('#edit-popup textarea').val());
+		} catch (e) {
+			console.error(e);
+			return;
+		}
+
+		for (let i = 0; i < obj.length; i++) {
+			console.log(obj[i]);
+			
+			var host = obj[i].source.toLowerCase();
+			var port = obj[i].port;
+			var topic = obj[i].topic.toLowerCase();
+
+			console.log(host)
+			
+			// Search existing clients
+			var clientCreated = false;
+			for (let j = 0; j < mqttClients.length; j++) {
+				if (mqttClients[j].host === host) {
+					console.log("Existing MQTT Client found.");
+					// Search existing topics
+					var subscribedToTopic = false;
+					for (let k = 0; k < mqttClientTopics[j].length; k++) {
+						if (mqttClientTopics[j][k] === topic) {
+							subscribedToTopic = true;
+							break;
+						}
+					}
+						
+					if (!subscribedToTopic) {
+						mqttClientTopics[j].push(topic);
+
+						if (mqttConnected[j]) { // only subscribe if already connected
+							mqttClients[j].subscribe(topic, {qos: 1});
+							createNewTopicGraph(host, topic);
+						}
+					}
+
+					clientCreated = true;
+					break;
+				}
+			}
+
+			if (!clientCreated) {
+				mqttClientTopics.push([topic]);
+				mqttConnected.push(false);
+
+				var id = "myclientid_" + parseInt(Math.random() * 100, 10);
+				mqttClients.push(new Paho.MQTT.Client(host, port, id));
+				mqttClientHosts.push(host);
+
+				var index = mqttClients.length - 1
+				var connectOptions = {
+					timeout: 3,
+					onSuccess: function () {
+						console.log("Connected to " + host + ", subscribing to topics");
+						mqttConnected[index] = true;
+						for (let j = 0; j < mqttClientTopics[index].length; j++) {
+							mqttClients[index].subscribe(mqttClientTopics[index][j], {qos: 1});
+							createNewTopicGraph(mqttClientHosts[index], mqttClientTopics[index][j]);
+						}
+					},
+					onFailure: function (message) {
+						alert("Failed to connect to " + host);
+						console.log("Failed to connect to " + host + ": " + message.errorMessage);
+					}
+				};
+
+				mqttClients[index].onMessageArrived = onMessageArrived;
+				mqttClients[index].onConnectionLost = function(responseObject) {
+					console.log("connection to " + host + " lost: " + responseObject.errorMessage);
+					alert("connection to " + host + " lost.");
+					//reconnect
+					mqttClients[index].connect(connectOptions);
+				};
+
+				mqttClients[index].connect(connectOptions);
+			}
+		}
+	}
+
+	$(document).ready(function() {
+		$("#editButton").click(function() {
+			$("#edit-popup").dialog({
+				width: '50%',
+				modal: true,
+				dialogClass: 'editor-dialog'
+			});
+		});
+
+		$('#edit-popup').on('dialogclose', function(event) {
+			if (reparseConfiguration) {
+				parseConfiguation();
+				reparseConfiguration = false;
+			}
+		});
+	});
+
+</script>
+</head>
+
+<body id="body">
+
+<div id="plotGrid"></div> 
+
+<div id="edit-popup" style="display: none">
+	<textarea></textarea>
+</div>
+
+<div id="footer">
+	<svg id="editButton" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 348.882 348.882"
+		xml:space="preserve">
+		<g>
+			<path d="M333.988,11.758l-0.42-0.383C325.538,4.04,315.129,0,304.258,0c-12.187,0-23.888,5.159-32.104,14.153L116.803,184.231
+				c-1.416,1.55-2.49,3.379-3.154,5.37l-18.267,54.762c-2.112,6.331-1.052,13.333,2.835,18.729c3.918,5.438,10.23,8.685,16.886,8.685
+				c0,0,0.001,0,0.001,0c2.879,0,5.693-0.592,8.362-1.76l52.89-23.138c1.923-0.841,3.648-2.076,5.063-3.626L336.771,73.176
+				C352.937,55.479,351.69,27.929,333.988,11.758z M130.381,234.247l10.719-32.134l0.904-0.99l20.316,18.556l-0.904,0.99
+				L130.381,234.247z M314.621,52.943L182.553,197.53l-20.316-18.556L294.305,34.386c2.583-2.828,6.118-4.386,9.954-4.386
+				c3.365,0,6.588,1.252,9.082,3.53l0.419,0.383C319.244,38.922,319.63,47.459,314.621,52.943z"/>
+			<path d="M303.85,138.388c-8.284,0-15,6.716-15,15v127.347c0,21.034-17.113,38.147-38.147,38.147H68.904
+				c-21.035,0-38.147-17.113-38.147-38.147V100.413c0-21.034,17.113-38.147,38.147-38.147h131.587c8.284,0,15-6.716,15-15
+				s-6.716-15-15-15H68.904c-37.577,0-68.147,30.571-68.147,68.147v180.321c0,37.576,30.571,68.147,68.147,68.147h181.798
+				c37.576,0,68.147-30.571,68.147-68.147V153.388C318.85,145.104,312.134,138.388,303.85,138.388z"/>
+		</g>
+	</svg><svg 
+		id="addButton" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 45.402 45.402"
+		xml:space="preserve">
+		<g>
+			<path d="M41.267,18.557H26.832V4.134C26.832,1.851,24.99,0,22.707,0c-2.283,0-4.124,1.851-4.124,4.135v14.432H4.141
+				c-2.283,0-4.139,1.851-4.138,4.135c-0.001,1.141,0.46,2.187,1.207,2.934c0.748,0.749,1.78,1.222,2.92,1.222h14.453V41.27
+				c0,1.142,0.453,2.176,1.201,2.922c0.748,0.748,1.777,1.211,2.919,1.211c2.282,0,4.129-1.851,4.129-4.133V26.857h14.435
+				c2.283,0,4.134-1.867,4.133-4.15C45.399,20.425,43.548,18.557,41.267,18.557z"/>
+		</g>
+	</svg>
+</div>
+
+</body>
+</html>

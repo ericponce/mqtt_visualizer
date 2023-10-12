@@ -1,0 +1,7 @@
+[
+    {
+        "source": "test.mosquitto.org",
+        "port": 1883,
+        "topic": "visualizer/data"
+    }
+]
